@@ -262,17 +262,17 @@ function playAlertSound(isRed) {
 }
 
 function showAlertPopup(patientName, alertType, message) {
-  // Remove any existing popup
   document.getElementById('alert-popup')?.remove();
 
-  const isRed = alertType === 'red';
+  const isRed    = alertType === 'red';
+  const isOrange = alertType === 'orange';
   const popup = document.createElement('div');
   popup.id = 'alert-popup';
   popup.innerHTML = `
     <div class="alert-popup-overlay" id="alert-popup-overlay">
-      <div class="alert-popup-box ${isRed ? 'popup-red' : 'popup-green'}">
-        <div class="alert-popup-icon">${isRed ? '🚨' : '⚠️'}</div>
-        <div class="alert-popup-title">${isRed ? 'ALERTA VERMELHO' : 'ALERTA VERDE'}</div>
+      <div class="alert-popup-box ${isRed ? 'popup-red' : 'popup-orange'}">
+        <div class="alert-popup-icon">${isRed ? '🚨' : '🟠'}</div>
+        <div class="alert-popup-title">${isRed ? 'ALERTA VERMELHO' : 'ALERTA LARANJA'}</div>
         <div class="alert-popup-patient">${patientName}</div>
         <div class="alert-popup-msg">${message}</div>
         <div class="alert-popup-time">${new Date().toLocaleTimeString('pt-PT', { hour:'2-digit', minute:'2-digit', second:'2-digit' })}</div>
@@ -283,13 +283,11 @@ function showAlertPopup(patientName, alertType, message) {
     </div>`;
   document.body.appendChild(popup);
 
-  // Close on button click or overlay click
   document.getElementById('alert-popup-close').addEventListener('click', () => popup.remove());
   document.getElementById('alert-popup-overlay').addEventListener('click', e => {
     if (e.target === e.currentTarget) popup.remove();
   });
 
-  // Auto-dismiss green alerts after 8 seconds; red stays until dismissed
   if (!isRed) setTimeout(() => popup.remove(), 8000);
 }
 
@@ -301,10 +299,10 @@ async function checkForNewAlerts() {
     const ev = latestEvents[p.id];
     if (!ev || alertedEventIds.has(ev.id)) continue;
 
-    const isRed   = ev.alert_state === 'RED_ALERT';
-    const isGreen = ev.alert_state === 'GREEN_ALERT';
+    const isRed    = ev.alert_state === 'RED_ALERT';
+    const isOrange = ev.alert_state === 'ORANGE_ALERT';
 
-    if (!isRed && !isGreen) continue;
+    if (!isRed && !isOrange) continue;
     if (notifPref === 'red' && !isRed) continue;
 
     // Mark as alerted immediately to avoid double-firing
@@ -323,11 +321,11 @@ async function checkForNewAlerts() {
     playAlertSound(isRed);
 
     // Show popup
-    showAlertPopup(p.name, isRed ? 'red' : 'green', message);
+    showAlertPopup(p.name, isRed ? 'red' : 'orange', message);
 
     // Browser notification (if permission granted)
     if (Notification.permission === 'granted') {
-      new Notification(`VitalGuard — ${isRed ? '🚨 Alerta Vermelho' : '⚠️ Alerta Verde'}`, {
+      new Notification(`VitalGuard — ${isRed ? '🚨 Alerta Vermelho' : '🟠 Alerta Laranja'}`, {
         body: `${p.name}: ${message}`,
         icon: '/favicon.ico',
       });
@@ -636,17 +634,17 @@ function initSettings() {
 function getStatus(ev) {
   if (!ev) return 'ok';
   switch (ev.alert_state) {
-    case 'RED_ALERT':                                    return 'crit';
-    case 'GREEN_ALERT': case 'WAITING_SOUND':           return 'warn';
-    case 'WAITING_STILLNESS':                           return 'warn';
-    default:                                            return 'ok';
+    case 'RED_ALERT':                                          return 'crit';
+    case 'ORANGE_ALERT': case 'WAITING_SOUND':                return 'warn';
+    case 'WAITING_STILLNESS':                                 return 'warn';
+    default:                                                  return 'ok';
   }
 }
 
 function stateLabel(state) {
   switch (state) {
     case 'IDLE':              return 'Normal';
-    case 'GREEN_ALERT':       return 'Alerta verde';
+    case 'ORANGE_ALERT':      return 'Alerta laranja';
     case 'WAITING_STILLNESS': return 'A observar';
     case 'WAITING_SOUND':     return 'À espera de resposta';
     case 'RED_ALERT':         return 'Alerta vermelho';
